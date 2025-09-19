@@ -47,7 +47,7 @@ public class AccountService {
         account.setCurrency(request.getCurrency());
         account.setDescription(request.getDescription());
 
-        Account saved = accountRepository.save(account);
+        Account saved = accountRepository.saveAndFlush(account);
 
         return accountMapper.toResponse(saved);
     }
@@ -60,7 +60,7 @@ public class AccountService {
                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
         account.setStatus(accountStatus.getStatus());
-        Account saved = accountRepository.save(account);
+        Account saved = accountRepository.saveAndFlush(account);
 
         return accountMapper.toResponse(saved);
        
