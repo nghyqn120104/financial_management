@@ -1,5 +1,6 @@
 package com.example.financial_management.services;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class AccountService {
         account.setType(request.getType());
         account.setCurrency(request.getCurrency());
         account.setDescription(request.getDescription());
+        account.setUpdatedAt(LocalDateTime.now());
 
         Account saved = accountRepository.save(account);
 
@@ -60,6 +62,7 @@ public class AccountService {
                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
         account.setStatus(accountStatus.getStatus());
+        account.setUpdatedAt(LocalDateTime.now());
         Account saved = accountRepository.save(account);
 
         return accountMapper.toResponse(saved);
