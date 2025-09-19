@@ -29,7 +29,7 @@ public abstract class AuditEntity {
     }
 
     @PreUpdate
-    public void preUpdate() {
+    public void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
 }
