@@ -15,7 +15,7 @@ import lombok.Setter;
 @Table(name = "users")
 @NoArgsConstructor
 public class User extends EntityBase {
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 100, columnDefinition = "nvarchar(100)")
     private String name;
 
     @Column(nullable = false, unique = true, length = 150)

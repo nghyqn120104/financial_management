@@ -24,7 +24,7 @@ public class Account extends EntityBase {
     @Column(name = "user_id", nullable = false, columnDefinition = "uniqueidentifier")
     private UUID userId;
 
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100, columnDefinition = "nvarchar(100)")
     private String name;
 
     @Column(name = "balance", nullable = false)
@@ -39,6 +39,6 @@ public class Account extends EntityBase {
     @Column(name = "status", nullable = false)
     private int status = Status.ACTIVE; // 1 = ACTIVE, 0 = INACTIVE
 
-    @Column(name = "description", length = 255, nullable = true)
+    @Column(name = "description", length = 255, nullable = true, columnDefinition = "nvarchar(255)")
     private String description;
 }
