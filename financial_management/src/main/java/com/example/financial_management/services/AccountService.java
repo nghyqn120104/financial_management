@@ -1,5 +1,7 @@
 package com.example.financial_management.services;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -29,6 +31,14 @@ public class AccountService {
         User user = validateUser(auth);
 
         Account account = accountMapper.toEntity(request, user.getId());
+
+        // đảm bảo initialBalance không null
+        BigDecimal initial = request.getInitialBalance() != null
+                ? request.getInitialBalance()
+                : BigDecimal.ZERO;
+
+        account.setBalance(initial);
+
         Account saved = accountRepository.save(account);
 
         return accountMapper.toResponse(saved);
@@ -63,7 +73,7 @@ public class AccountService {
         Account saved = accountRepository.saveAndFlush(account);
 
         return accountMapper.toResponse(saved);
-       
+
     }
 
     @Transactional
@@ -80,6 +90,23 @@ public class AccountService {
     private User validateUser(Auth auth) {
         return userRepository.findById(UUID.fromString(auth.getId()))
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    public AccountResponse getAccountById(UUID accountId, Auth auth) {
+        User user = validateUser(auth);
+
+        Account account = accountRepository.findByIdAndUserId(accountId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+
+        return accountMapper.toResponse(account);
+    }
+
+    public List<AccountResponse> getAllAccounts(Auth auth) {
+        User user = validateUser(auth);
+        List<Account> accounts = accountRepository.findAllByUserId(user.getId());
+        return accounts.stream()
+                .map(accountMapper::toResponse)
+                .toList();
     }
 
 }

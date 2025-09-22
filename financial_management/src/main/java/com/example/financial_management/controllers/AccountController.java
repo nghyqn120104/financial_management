@@ -53,4 +53,11 @@ public class AccountController {
             @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<Boolean>().withData(() -> accountService.deleteAccount(accountId, auth));
     }
+
+    @PostMapping("/all")
+    public ResponseEntity<AbstractResponse<java.util.List<AccountResponse>>> getAllAccounts(
+            @AuthenticationPrincipal Auth auth) {
+        return new AbstractResponse<java.util.List<AccountResponse>>()
+                .withData(() -> accountService.getAllAccounts(auth));
+    }
 }
