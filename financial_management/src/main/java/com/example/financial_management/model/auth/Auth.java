@@ -25,12 +25,4 @@ public class Auth {
     public UUID getUUID() {
         return UUID.fromString(id);
     }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getName() {
-        return name;
-    }
 }

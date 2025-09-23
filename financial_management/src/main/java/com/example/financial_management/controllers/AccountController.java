@@ -1,5 +1,6 @@
 package com.example.financial_management.controllers;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -55,9 +56,9 @@ public class AccountController {
     }
 
     @PostMapping("/all")
-    public ResponseEntity<AbstractResponse<java.util.List<AccountResponse>>> getAllAccounts(
+    public ResponseEntity<AbstractResponse<List<AccountResponse>>> getAllAccounts(
             @AuthenticationPrincipal Auth auth) {
-        return new AbstractResponse<java.util.List<AccountResponse>>()
+        return new AbstractResponse<List<AccountResponse>>()
                 .withData(() -> accountService.getAllAccounts(auth));
     }
 }
