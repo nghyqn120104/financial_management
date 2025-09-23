@@ -13,6 +13,8 @@ import com.example.financial_management.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,7 +33,8 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
-    private final String uploadDir = "images/";
+    @Value("${app.upload.dir}")
+    private String uploadDir;
 
     public List<TransactionResponse> getAllTransactions(Auth auth) {
         User user = getUser(auth);
@@ -124,7 +127,7 @@ public class TransactionService {
             Files.write(path, file.getBytes());
 
             // Trả về path để FE dùng (có thể đổi thành full URL nếu cần)
-            return "/images/" + fileName;
+            return uploadDir + fileName;
         } catch (Exception e) {
             throw new RuntimeException("Upload file thất bại", e);
         }
