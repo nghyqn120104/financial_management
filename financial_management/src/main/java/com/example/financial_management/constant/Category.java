@@ -20,6 +20,9 @@ public class Category {
     public static final int GIFTS = 14;
     public static final int OTHER_INCOME = 15;
 
+    // Transfer Category
+    public static final int TRANSFER = 16;
+
     private Category() {
         // Utility class
     }

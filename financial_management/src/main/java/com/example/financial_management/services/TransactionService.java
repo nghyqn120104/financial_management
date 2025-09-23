@@ -1,5 +1,6 @@
 package com.example.financial_management.services;
 
+import com.example.financial_management.constant.Status;
 import com.example.financial_management.entity.Account;
 import com.example.financial_management.entity.Transaction;
 import com.example.financial_management.entity.User;
@@ -7,7 +8,6 @@ import com.example.financial_management.mapper.TransactionMapper;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.model.transaction.TransactionResponse;
-import com.example.financial_management.repository.AccountRepository;
 import com.example.financial_management.repository.TransactionRepository;
 import com.example.financial_management.repository.UserRepository;
 
@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,7 +31,7 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
     private final UserRepository userRepository;
-    private final AccountRepository accountRepository;
+    private final AccountService accountService;
     @Value("${app.upload.dir}")
     private String uploadDir;
 
@@ -50,12 +49,10 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse createTransaction(TransactionRequest request, Auth auth, MultipartFile file) {
-        User user = getUser(auth);
-        Account account = accountRepository.findByIdAndUserId(request.getAccountId(), user.getId())
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+        Account account = accountService.validateAccount(request.getAccountId(), auth, Status.ACTIVE);
 
         // Tạo transaction
-        Transaction transaction = transactionMapper.toEntity(request, user.getId());
+        Transaction transaction = transactionMapper.toEntity(request, account.getUserId());
         transaction.setCreatedAt(LocalDateTime.now());
         transaction.setUpdatedAt(LocalDateTime.now());
 
@@ -75,7 +72,7 @@ public class TransactionService {
         Transaction saved = transactionRepository.save(transaction);
 
         // Cập nhật số dư account
-        updateAccountBalance(account, request);
+        accountService.updateAccountBalance(account, request);
 
         return transactionMapper.toResponse(saved);
     }
@@ -100,23 +97,9 @@ public class TransactionService {
         transactionRepository.delete(transaction);
     }
 
-    public User getUser(Auth auth) {
+    private User getUser(Auth auth) {
         return userRepository.findById(UUID.fromString(auth.getId()))
                 .orElseThrow(() -> new RuntimeException("User not found"));
-    }
-
-    public void updateAccountBalance(Account account, TransactionRequest request) {
-        BigDecimal amount = request.getAmount();
-
-        if (request.getType() == 1) {
-            // Thu nhập
-            account.setBalance(account.getBalance().add(amount));
-        } else {
-            // Chi tiêu
-            account.setBalance(account.getBalance().subtract(amount));
-        }
-
-        accountRepository.save(account);
     }
 
     private String saveImage(MultipartFile file) {
