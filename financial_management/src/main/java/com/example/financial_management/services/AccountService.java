@@ -65,8 +65,9 @@ public class AccountService {
 
     @Transactional
     public AccountResponse updateStatusAccount(AccountStatus accountStatus, Auth auth) {
-        Account account = validateAccount(accountStatus.getId(), auth, Status.ACTIVE);
-        // Cập nhật trạng thái
+        User user = validateUser(auth);
+        Account account = accountRepository.findByIdAndUserId(accountStatus.getId(), user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
 
         account.setStatus(accountStatus.getStatus());
         Account saved = accountRepository.saveAndFlush(account);
@@ -77,25 +78,42 @@ public class AccountService {
 
     @Transactional
     public boolean deleteAccount(UUID accountId, Auth auth) {
-        Account account = validateAccount(accountId, auth, Status.ACTIVE);
+        User user = validateUser(auth);
+
+        Account account = accountRepository.findByIdAndUserId(accountId, user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
 
         accountRepository.delete(account);
         return true;
     }
 
+    public AccountResponse getAccountById(UUID accountId, Auth auth) {
+        Account account = validateAccount(accountId, auth, Status.ACTIVE);
+
+        return accountMapper.toResponse(account);
+    }
+
+    public List<AccountResponse> getAllAccounts(Auth auth) {
+        User user = validateUser(auth);
+        List<Account> accounts = accountRepository.findAllByUserIdAndStatus(user.getId(), Status.ACTIVE);
+        return accounts.stream()
+                .map(accountMapper::toResponse)
+                .toList();
+    }
+
     private User validateUser(Auth auth) {
-        return userRepository.findById(UUID.fromString(auth.getId()))
+        return userRepository.findByIdAndStatus(UUID.fromString(auth.getId()), Status.ACTIVE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
     public Account validateAccount(UUID accountId, Auth auth, int status) {
         User user = validateUser(auth);
 
-        if(accountRepository.findByIdAndUserId(accountId, user.getId()).isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found or inactive");
-        }else {
+        if (accountRepository.findByIdAndUserId(accountId, user.getId()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account is not found");
+        } else {
             return accountRepository.findByIdAndStatus(accountId, status)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found or inactive"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account is not inactive"));
         }
     }
 
@@ -111,20 +129,6 @@ public class AccountService {
         }
 
         accountRepository.save(account);
-    }
-
-    public AccountResponse getAccountById(UUID accountId, Auth auth) {
-        Account account = validateAccount(accountId, auth, Status.ACTIVE);
-
-        return accountMapper.toResponse(account);
-    }
-
-    public List<AccountResponse> getAllAccounts(Auth auth) {
-        User user = validateUser(auth);
-        List<Account> accounts = accountRepository.findAllByUserIdAndStatus(user.getId(), Status.ACTIVE);
-        return accounts.stream()
-                .map(accountMapper::toResponse)
-                .toList();
     }
 
 }
