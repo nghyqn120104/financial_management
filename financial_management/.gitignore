@@ -34,5 +34,3 @@ build/
 
 # Ignore application properties (local configs)
 src/main/resources/application.properties
-# Ignore database files
-images/
