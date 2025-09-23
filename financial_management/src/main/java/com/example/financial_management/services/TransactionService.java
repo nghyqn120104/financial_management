@@ -31,7 +31,7 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
-    private final String uploadDir = "uploads/";
+    private final String uploadDir = "images/";
 
     public List<TransactionResponse> getAllTransactions(Auth auth) {
         User user = getUser(auth);
@@ -124,7 +124,7 @@ public class TransactionService {
             Files.write(path, file.getBytes());
 
             // Trả về path để FE dùng (có thể đổi thành full URL nếu cần)
-            return "/uploads/" + fileName;
+            return "/images/" + fileName;
         } catch (Exception e) {
             throw new RuntimeException("Upload file thất bại", e);
         }
