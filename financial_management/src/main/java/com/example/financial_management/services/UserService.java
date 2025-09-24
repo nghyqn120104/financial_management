@@ -117,16 +117,20 @@ public class UserService {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        user.setStatus(request.getStatus());
-        User saved = userRepository.saveAndFlush(user);
-        return userMapper.toResponse(saved);
+        if (user.getRole() == Role.ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Can't change status");
+        } else {
+            user.setStatus(request.getStatus());
+            User saved = userRepository.saveAndFlush(user);
+            return userMapper.toResponse(saved);
+        }
     }
 
     private void validateAdmin(Auth auth) {
         User user = userRepository.findById(auth.getUUID())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        
-        log.debug("Is Admin? {}",auth.isAdmin());
+
+        log.debug("Is Admin? {}", auth.isAdmin());
 
         if (!auth.isAdmin() || user.getRole() != Role.ADMIN) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. Admins only.");
