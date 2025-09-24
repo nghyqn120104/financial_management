@@ -1,11 +1,11 @@
 package com.example.financial_management.model.user;
 
+import java.util.UUID;
+
 import lombok.Data;
 
 @Data
-public class UserResponse {
-    private String name;
-    private String email;
+public class ChangeUserStatusRequest {
+    private UUID userId;
     private int status;
-    private int role;
 }

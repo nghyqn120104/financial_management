@@ -3,9 +3,6 @@ package com.example.financial_management.model.user;
 import lombok.Data;
 
 @Data
-public class UserResponse {
+public class ChangeNameRequest {
     private String name;
-    private String email;
-    private int status;
-    private int role;
 }
