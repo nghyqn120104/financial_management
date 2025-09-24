@@ -10,6 +10,7 @@ import com.example.financial_management.repository.UserRepository;
 import com.example.financial_management.util.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtTokenUtil jwtTokenUtil;
     private final UserMapper userMapper;
+    @Value("${email_admin}")
+    private final String emailAdmin;
 
     public UserResponse signUp(UserSignUpRequest request) {
 
@@ -38,7 +41,7 @@ public class UserService {
         user.setPasswordHash(passwordHash);
         user.setStatus(Status.ACTIVE); // active
 
-        if(request.getEmail().equals("nghyqn1201@gmail.com")) {
+        if(request.getEmail().equals(emailAdmin)){
             user.setRole(Role.ADMIN);
         } else {
             user.setRole(Role.USER);
