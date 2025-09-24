@@ -12,7 +12,13 @@ import com.example.financial_management.model.transaction.TransactionResponse;
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
     List<TransactionResponse> findByUserId(UUID userId);
 
-    List<TransactionResponse> findByAccountId(UUID accountId);
-
     Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);
+
+    List<TransactionResponse> findAllByUserIdAndType(UUID userId, int type);
+
+    List<TransactionResponse> findAllByAccountId(UUID accountId);
+
+    List<TransactionResponse> findAllByUserIdAndCategory(UUID userId, int category);
+
+    List<TransactionResponse> findAllByUserIdAndCurrency(UUID userId, int currency);
 }

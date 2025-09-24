@@ -32,6 +32,7 @@ public class JwtTokenUtil {
                 .claim("name", auth.getName())
                 .claim("email", auth.getEmail())
                 .claim("status", auth.getStatus())
+                .claim("role", auth.getRole())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
@@ -56,6 +57,7 @@ public class JwtTokenUtil {
         auth.setName(claims.get("name", String.class));
         auth.setEmail(claims.get("email", String.class));
         auth.setStatus(claims.get("status", Integer.class));
+        auth.setRole(claims.get("role",Integer.class));
         return auth;
     }
 
