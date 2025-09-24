@@ -1,6 +1,6 @@
 package com.example.financial_management.entity;
 
-import com.example.financial_management.constant.Profile;
+import com.example.financial_management.constant.Role;
 import com.example.financial_management.constant.Status;
 import com.example.financial_management.entity.base.EntityBase;
 
@@ -28,7 +28,7 @@ public class User extends EntityBase {
     private String passwordSalt;
 
     @Column(nullable = false)
-    private int profile = Profile.ORGANIZER;
+    private int role = Role.USER;
 
     @Column(nullable = false)
     private int status = Status.ACTIVE;
