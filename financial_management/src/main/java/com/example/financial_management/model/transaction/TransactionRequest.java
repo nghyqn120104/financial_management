@@ -11,6 +11,7 @@ public class TransactionRequest {
     private BigDecimal amount;
     private int type;
     private int category;
+    private int currency;
     private String description;
     private boolean haveImage;
 }

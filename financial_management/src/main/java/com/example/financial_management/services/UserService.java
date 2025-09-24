@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
+
+import com.example.financial_management.constant.Role;
 import com.example.financial_management.constant.Status;
 
 @Service
@@ -35,6 +37,12 @@ public class UserService {
         user.setPasswordSalt(salt);
         user.setPasswordHash(passwordHash);
         user.setStatus(Status.ACTIVE); // active
+
+        if(request.getEmail().equals("nghyqn1201@gmail.com")) {
+            user.setRole(Role.ADMIN);
+        } else {
+            user.setRole(Role.USER);
+        }
 
         User saved = userRepository.save(user);
         return userMapper.toResponse(saved);

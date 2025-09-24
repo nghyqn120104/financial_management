@@ -56,7 +56,7 @@ public class AuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + auth.getProfile()));
+        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + auth.getRole()));
 
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(auth, token,
                 authorities);

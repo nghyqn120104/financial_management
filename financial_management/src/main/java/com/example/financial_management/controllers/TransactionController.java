@@ -9,16 +9,22 @@ import com.example.financial_management.model.AbstractResponse;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.model.transaction.TransactionResponse;
+import com.example.financial_management.model.transaction.TransactionUpdateResponse;
 import com.example.financial_management.services.TransactionService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+import java.util.UUID;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 @RestController
 @RequestMapping("/transactions")
@@ -36,5 +42,15 @@ public class TransactionController {
         return new AbstractResponse<TransactionResponse>()
                 .withData(() -> transactionService.createTransaction(request, auth, file));
     }
+
+    @PostMapping(value = "/{id}")
+    public ResponseEntity<AbstractResponse<TransactionUpdateResponse>> updateTransaction(
+            @PathVariable("id") UUID transactionId,
+            @RequestBody TransactionRequest request,
+            @AuthenticationPrincipal Auth auth) {
+        return new AbstractResponse<TransactionUpdateResponse>()
+                .withData(() -> transactionService.updateTransaction(request, auth, transactionId));
+    }
+    
 
 }

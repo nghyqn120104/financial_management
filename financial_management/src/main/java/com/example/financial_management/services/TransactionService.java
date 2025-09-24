@@ -1,6 +1,8 @@
 package com.example.financial_management.services;
 
+import com.example.financial_management.constant.Category;
 import com.example.financial_management.constant.Status;
+import com.example.financial_management.constant.TransactionType;
 import com.example.financial_management.entity.Account;
 import com.example.financial_management.entity.Transaction;
 import com.example.financial_management.entity.User;
@@ -8,6 +10,8 @@ import com.example.financial_management.mapper.TransactionMapper;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.model.transaction.TransactionResponse;
+import com.example.financial_management.model.transaction.TransactionUpdateResponse;
+import com.example.financial_management.repository.AccountRepository;
 import com.example.financial_management.repository.TransactionRepository;
 import com.example.financial_management.repository.UserRepository;
 
@@ -18,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,6 +37,7 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final UserRepository userRepository;
     private final AccountService accountService;
+    private final AccountRepository accountRepository;
     @Value("${app.upload.dir}")
     private String uploadDir;
 
@@ -50,6 +56,9 @@ public class TransactionService {
     @Transactional
     public TransactionResponse createTransaction(TransactionRequest request, Auth auth, MultipartFile file) {
         Account account = accountService.validateAccount(request.getAccountId(), auth, Status.ACTIVE);
+
+        validateCurrency(request, account);
+        validateCategory(request);
 
         // Tạo transaction
         Transaction transaction = transactionMapper.toEntity(request, account.getUserId());
@@ -77,17 +86,37 @@ public class TransactionService {
         return transactionMapper.toResponse(saved);
     }
 
-    public TransactionResponse update(TransactionRequest updated, Auth auth, UUID id) {
-        Transaction transaction = transactionRepository.findByIdAndUserId(id, UUID.fromString(auth.getId()))
+    @Transactional
+    public TransactionUpdateResponse updateTransaction(TransactionRequest updated, Auth auth, UUID transactionId) {
+        Account account = accountService.validateAccount(updated.getAccountId(), auth, Status.ACTIVE);
+
+        Transaction transaction = transactionRepository.findByIdAndUserId(transactionId, account.getUserId())
                 .orElseThrow(() -> new RuntimeException("Transaction not found or access denied"));
+
+        // Giữ lại amount cũ
+        BigDecimal oldAmount = transaction.getAmount();
+
+        // Cập nhật transaction
         transaction.setAmount(updated.getAmount());
         transaction.setDescription(updated.getDescription());
         transaction.setType(updated.getType());
         transaction.setAccountId(updated.getAccountId());
         transaction.setUserId(UUID.fromString(auth.getId()));
         transaction.setUpdatedAt(LocalDateTime.now());
+
         Transaction saved = transactionRepository.save(transaction);
-        return transactionMapper.toResponse(saved);
+
+        // Tính chênh lệch
+        BigDecimal difference = updated.getAmount().subtract(oldAmount);
+
+        // Cập nhật balance account
+        account.setBalance(account.getBalance().add(difference));
+        accountRepository.save(account);
+
+        // Trả response có thêm difference
+        TransactionUpdateResponse response = transactionMapper.toUpdateResponse(saved);
+        response.setDifference(difference);
+        return response;
     }
 
     public void delete(UUID id, Auth auth) {
@@ -98,8 +127,35 @@ public class TransactionService {
     }
 
     private User getUser(Auth auth) {
-        return userRepository.findById(UUID.fromString(auth.getId()))
+        return userRepository.findByIdAndStatus(UUID.fromString(auth.getId()), Status.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    private void validateCurrency(TransactionRequest request, Account account) {
+        if (request.getCurrency() != account.getCurrency()) {
+            throw new RuntimeException("Transaction currency does not match account currency");
+        }
+    }
+
+    private void validateCategory(TransactionRequest request) {
+        int type = request.getType();
+        int category = request.getCategory();
+
+        if (type == TransactionType.EXPENSE) {
+            if (category < Category.FOOD || category > Category.OTHER_EXPENSE) {
+                throw new RuntimeException("Invalid category for EXPENSE transaction");
+            }
+        } else if (type == TransactionType.INCOME) {
+            if (category < Category.SALARY || category > Category.OTHER_INCOME) {
+                throw new RuntimeException("Invalid category for INCOME transaction");
+            }
+        } else if (type == TransactionType.TRANSFER) {
+            if (category != Category.TRANSFER) {
+                throw new RuntimeException("Invalid category for TRANSFER transaction");
+            }
+        } else {
+            throw new RuntimeException("Unknown transaction type: " + type);
+        }
     }
 
     private String saveImage(MultipartFile file) {
