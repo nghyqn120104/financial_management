@@ -8,6 +8,7 @@ import com.example.financial_management.model.user.ChangeUserStatusRequest;
 import com.example.financial_management.model.user.UserResponse;
 import com.example.financial_management.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -30,32 +31,38 @@ public class UserController {
 
     @GetMapping("/me")
     @Operation(summary = "Lấy thông tin người dùng hiện tại")
-    public ResponseEntity<AbstractResponse<UserResponse>> getCurrentUser(@AuthenticationPrincipal Auth auth) {
+    public ResponseEntity<AbstractResponse<UserResponse>> getCurrentUser(
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<UserResponse>().withData(() -> userService.getCurrentUser(auth));
     }
 
     @PostMapping("/updateProfile")
     @Operation(summary = "Cập nhật thông tin người dùng hiện tại")
-    public ResponseEntity<AbstractResponse<UserResponse>> updateProfile(@AuthenticationPrincipal Auth auth, @RequestBody ChangeNameRequest request) {
+    public ResponseEntity<AbstractResponse<UserResponse>> updateProfile(
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth, @RequestBody ChangeNameRequest request) {
         return new AbstractResponse<UserResponse>().withData(() -> userService.updateProfile(auth, request));
     }
 
     @PostMapping("/changePassword")
     @Operation(summary = "Đổi mật khẩu người dùng hiện tại")
-    public ResponseEntity<AbstractResponse<UserResponse>> changePassword(@AuthenticationPrincipal Auth auth, @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<AbstractResponse<UserResponse>> changePassword(
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth, @RequestBody ChangePasswordRequest request) {
         return new AbstractResponse<UserResponse>().withData(() -> userService.changePassword(auth, request));
     }
 
     @GetMapping("/listUser")
     @Operation(summary = "Lấy danh sách tất cả người dùng (chỉ dành cho admin)")
-    public ResponseEntity<AbstractResponse<List<UserResponse>>> getAllUsers(@AuthenticationPrincipal Auth auth) {
+    public ResponseEntity<AbstractResponse<List<UserResponse>>> getAllUsers(
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<List<UserResponse>>().withData(() -> userService.getAllUsers(auth));
     }
 
     @PostMapping("/changeStatus")
     @Operation(summary = "Thay đổi trạng thái người dùng (chỉ dành cho admin)")
-    public ResponseEntity<AbstractResponse<UserResponse>> changeUserStatus(@AuthenticationPrincipal Auth auth, @RequestBody ChangeUserStatusRequest request) {
+    public ResponseEntity<AbstractResponse<UserResponse>> changeUserStatus(
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth,
+            @RequestBody ChangeUserStatusRequest request) {
         return new AbstractResponse<UserResponse>().withData(() -> userService.updateStatusUser(auth, request));
     }
-    
+
 }

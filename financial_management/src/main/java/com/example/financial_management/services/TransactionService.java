@@ -7,6 +7,7 @@ import com.example.financial_management.entity.Account;
 import com.example.financial_management.entity.Transaction;
 import com.example.financial_management.entity.User;
 import com.example.financial_management.mapper.TransactionMapper;
+import com.example.financial_management.model.PageResponse;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.model.transaction.TransactionResponse;
@@ -17,8 +18,11 @@ import com.example.financial_management.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,10 +31,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class TransactionService {
     private final TransactionRepository transactionRepository;
@@ -41,9 +45,20 @@ public class TransactionService {
     @Value("${app.upload.dir}")
     private String uploadDir;
 
-    public List<TransactionResponse> getAllTransactions(Auth auth) {
+    public PageResponse<TransactionResponse> getAllTransactions(Auth auth, Pageable pageable) {
         User user = getUser(auth);
-        return transactionRepository.findByUserId(user.getId());
+
+        Page<TransactionResponse> pageResult = transactionRepository.findByUserId(user.getId(), pageable)
+                .map(transactionMapper::toResponse);
+
+        PageResponse<TransactionResponse> response = new PageResponse<>(
+                pageResult.getContent(),
+                pageResult.getNumber() + 1, // cộng 1 vì Page mặc định bắt đầu từ 0
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages());
+
+        return response;
     }
 
     public TransactionResponse getById(UUID id, Auth auth) {
@@ -51,6 +66,23 @@ public class TransactionService {
         return transactionRepository.findByIdAndUserId(id, user.getId())
                 .map(transactionMapper::toResponse)
                 .orElse(null);
+    }
+
+    public PageResponse<TransactionResponse> getTransactionByAccount(UUID accountId, Auth auth, Pageable pageable) {
+        User user = getUser(auth);
+        Account account = accountService.validateAccount(accountId, auth, Status.ACTIVE);
+        Page<TransactionResponse> pageResult = transactionRepository
+                .findByAccountIdAndUserId(account.getId(), user.getId(), pageable)
+                .map(transactionMapper::toResponse);
+
+        PageResponse<TransactionResponse> response = new PageResponse<>(
+                pageResult.getContent(),
+                pageResult.getNumber() + 1, // cộng 1 vì Page mặc định bắt đầu từ 0
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages());
+
+        return response;
     }
 
     @Transactional
@@ -62,8 +94,6 @@ public class TransactionService {
 
         // Tạo transaction
         Transaction transaction = transactionMapper.toEntity(request, account.getUserId());
-        transaction.setCreatedAt(LocalDateTime.now());
-        transaction.setUpdatedAt(LocalDateTime.now());
 
         // Kiểm tra nếu client muốn có ảnh (haveImage = true) thì mới xử lý file
         if (request.isHaveImage()) {

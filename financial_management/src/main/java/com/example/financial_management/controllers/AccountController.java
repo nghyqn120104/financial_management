@@ -19,6 +19,8 @@ import com.example.financial_management.model.account.AccountResponse;
 import com.example.financial_management.model.account.AccountStatus;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.services.AccountService;
+
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -31,13 +33,13 @@ public class AccountController {
 
     @PostMapping("/create")
     public ResponseEntity<AbstractResponse<AccountResponse>> createAccount(@RequestBody AccountRequest request,
-            @AuthenticationPrincipal Auth auth) {
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<AccountResponse>().withData(() -> accountService.createAccount(request, auth));
     }
 
     @PostMapping("/{id}")
     public ResponseEntity<AbstractResponse<AccountResponse>> updateAccount(@PathVariable("id") UUID accountId,
-            @RequestBody AccountRequest request, @AuthenticationPrincipal Auth auth) {
+            @RequestBody AccountRequest request, @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<AccountResponse>()
                 .withData(() -> accountService.updateAccount(accountId, request, auth));
     }
@@ -45,26 +47,26 @@ public class AccountController {
     @PostMapping("/{id}/status")
     public ResponseEntity<AbstractResponse<AccountResponse>> updateAccountStatus(
             @RequestBody AccountStatus accountStatus,
-            @AuthenticationPrincipal Auth auth) {
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<AccountResponse>()
                 .withData(() -> accountService.updateStatusAccount(accountStatus, auth));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<AbstractResponse<Boolean>> deleteAccount(@PathVariable("id") UUID accountId,
-            @AuthenticationPrincipal Auth auth) {
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<Boolean>().withData(() -> accountService.removeAccount(accountId, auth));
     }
 
     @GetMapping("/all")
     public ResponseEntity<AbstractResponse<List<AccountResponse>>> getAllAccounts(
-            @AuthenticationPrincipal Auth auth) {
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<List<AccountResponse>>()
                 .withData(() -> accountService.getAllAccounts(auth));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AbstractResponse<AccountResponse>> getAccountId(@AuthenticationPrincipal Auth auth,
+    public ResponseEntity<AbstractResponse<AccountResponse>> getAccountId(@Parameter(hidden = true) @AuthenticationPrincipal Auth auth,
             @PathVariable("id") UUID accountId) {
         return new AbstractResponse<AccountResponse>().withData(() -> accountService.getAccountById(accountId, auth));
     }
