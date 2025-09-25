@@ -77,11 +77,11 @@ public class TransactionService {
             transaction.setImagePath(null); // đảm bảo clear path nếu không có ảnh
         }
 
-        // Lưu transaction trước
-        Transaction saved = transactionRepository.save(transaction);
-
         // Cập nhật số dư account
         accountService.updateAccountBalance(account, request);
+
+        // Lưu transaction trước
+        Transaction saved = transactionRepository.save(transaction);
 
         return transactionMapper.toResponse(saved);
     }
