@@ -4,24 +4,27 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.financial_management.entity.Transaction;
-import com.example.financial_management.model.transaction.TransactionResponse;
 
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
-    List<TransactionResponse> findByUserId(UUID userId);
+    Page<Transaction> findByUserId(UUID userId, Pageable pageable);
 
     Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);
 
-    List<TransactionResponse> findAllByUserIdAndType(UUID userId, int type);
+    List<Transaction> findAllByUserIdAndType(UUID userId, int type);
 
-    List<TransactionResponse> findAllByAccountId(UUID accountId);
+    List<Transaction> findAllByAccountId(UUID accountId);
 
-    List<TransactionResponse> findAllByUserIdAndCategory(UUID userId, int category);
+    List<Transaction> findAllByUserIdAndCategory(UUID userId, int category);
 
-    List<TransactionResponse> findAllByUserIdAndCurrency(UUID userId, int currency);
+    List<Transaction> findAllByUserIdAndCurrency(UUID userId, int currency);
 
     boolean existsByAccountIdAndCurrencyNot(UUID accountId, int currency);
+
+    Page<Transaction> findByAccountIdAndUserId(UUID accountId, UUID userId, Pageable pageable);
 
 }
