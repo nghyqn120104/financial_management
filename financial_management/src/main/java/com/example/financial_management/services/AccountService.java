@@ -20,6 +20,7 @@ import com.example.financial_management.model.account.AccountStatus;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.repository.AccountRepository;
+import com.example.financial_management.repository.TransactionRepository;
 import com.example.financial_management.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
     private final AccountMapper accountMapper;
+    private final TransactionRepository transactionRepository;
 
     @Transactional
     public AccountResponse createAccount(AccountRequest request, Auth auth) {
@@ -53,10 +55,20 @@ public class AccountService {
     public AccountResponse updateAccount(UUID accountId, AccountRequest request, Auth auth) {
         Account account = validateAccount(accountId, auth, Status.ACTIVE);
 
+        // Nếu user muốn đổi currency
+        if (account.getCurrency() != request.getCurrency()) {
+            boolean existsMismatch = transactionRepository.existsByAccountIdAndCurrencyNot(
+                    accountId, request.getCurrency());
+
+            if (existsMismatch) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot change currency because account already has transaction with another currency.");
+            }
+            account.setCurrency(request.getCurrency());
+        }
+
         // Cập nhật các field từ request
         account.setName(request.getName());
         account.setType(request.getType());
-        account.setCurrency(request.getCurrency());
         account.setDescription(request.getDescription());
         // account.setBalance(request.getInitialBalance());
 
