@@ -18,7 +18,7 @@ import lombok.Setter;
 @Setter
 public class Transaction extends EntityBase {
 
-    @Column(name = "account_id", nullable = false, columnDefinition = "uniqueidentifier")
+    @Column(name = "account_id", nullable = true, columnDefinition = "uniqueidentifier")
     private UUID accountId;
 
     @Column(name = "user_id", nullable = false, columnDefinition = "uniqueidentifier")

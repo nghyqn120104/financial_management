@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,13 +53,19 @@ public class AccountController {
     @DeleteMapping("/{id}")
     public ResponseEntity<AbstractResponse<Boolean>> deleteAccount(@PathVariable("id") UUID accountId,
             @AuthenticationPrincipal Auth auth) {
-        return new AbstractResponse<Boolean>().withData(() -> accountService.deleteAccount(accountId, auth));
+        return new AbstractResponse<Boolean>().withData(() -> accountService.removeAccount(accountId, auth));
     }
 
-    @PostMapping("/all")
+    @GetMapping("/all")
     public ResponseEntity<AbstractResponse<List<AccountResponse>>> getAllAccounts(
             @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<List<AccountResponse>>()
                 .withData(() -> accountService.getAllAccounts(auth));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<AbstractResponse<AccountResponse>> getAccountId(@AuthenticationPrincipal Auth auth,
+            @PathVariable("id") UUID accountId) {
+        return new AbstractResponse<AccountResponse>().withData(() -> accountService.getAccountById(accountId, auth));
     }
 }
