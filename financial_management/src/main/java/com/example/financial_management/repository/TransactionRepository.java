@@ -21,4 +21,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     List<TransactionResponse> findAllByUserIdAndCategory(UUID userId, int category);
 
     List<TransactionResponse> findAllByUserIdAndCurrency(UUID userId, int currency);
+
+    boolean existsByAccountIdAndCurrencyNot(UUID accountId, int currency);
+
 }
