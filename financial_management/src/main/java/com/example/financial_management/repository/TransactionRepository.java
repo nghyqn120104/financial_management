@@ -7,10 +7,11 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import com.example.financial_management.entity.Transaction;
 
-public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
+public interface TransactionRepository extends JpaRepository<Transaction, UUID>, JpaSpecificationExecutor<Transaction> {
     Page<Transaction> findByUserId(UUID userId, Pageable pageable);
 
     Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);
@@ -26,5 +27,4 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     boolean existsByAccountIdAndCurrencyNot(UUID accountId, int currency);
 
     Page<Transaction> findByAccountIdAndUserId(UUID accountId, UUID userId, Pageable pageable);
-
 }

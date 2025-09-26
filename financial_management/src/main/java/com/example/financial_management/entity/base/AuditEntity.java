@@ -25,7 +25,9 @@ public abstract class AuditEntity {
 
     @PrePersist
     public void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        if (this.createdAt == null) { // chỉ set nếu chưa có
+            this.createdAt = LocalDateTime.now();
+        }
     }
 
     @PreUpdate

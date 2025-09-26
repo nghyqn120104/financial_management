@@ -9,8 +9,11 @@ import com.example.financial_management.entity.User;
 import com.example.financial_management.mapper.TransactionMapper;
 import com.example.financial_management.model.PageResponse;
 import com.example.financial_management.model.auth.Auth;
+import com.example.financial_management.model.transaction.TransactionDateRequest;
+import com.example.financial_management.model.transaction.TransactionFilterRequest;
 import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.model.transaction.TransactionResponse;
+import com.example.financial_management.model.transaction.TransactionSpecification;
 import com.example.financial_management.model.transaction.TransactionUpdateResponse;
 import com.example.financial_management.repository.TransactionRepository;
 import com.example.financial_management.repository.UserRepository;
@@ -21,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -83,7 +87,7 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionResponse createTransaction(TransactionRequest request, Auth auth, MultipartFile file) {
+    public TransactionResponse createTransaction(TransactionDateRequest request, Auth auth, MultipartFile file) {
         Account account = accountService.validateAccount(request.getAccountId(), auth, Status.ACTIVE);
 
         validateCurrency(request.getCurrency(), account);
@@ -91,6 +95,9 @@ public class TransactionService {
 
         // Tạo transaction
         Transaction transaction = transactionMapper.toEntity(request, account.getUserId());
+        if (request.getCreateAt() != null) {
+            transaction.setCreatedAt(request.getCreateAt());
+        }
 
         // Xử lý ảnh
         handleTransactionImage(transaction, request.isHaveImage(), file);
@@ -159,6 +166,27 @@ public class TransactionService {
         // Xoá transaction
         transactionRepository.delete(transaction);
         return true;
+    }
+
+    public PageResponse<TransactionResponse> filterTransactions(Auth auth, TransactionFilterRequest filter) {
+        User user = getUser(auth);
+
+        Pageable pageable = PageRequest.of(filter.getPage() - 1, filter.getSize());
+
+        Page<Transaction> result = transactionRepository.findAll(
+                TransactionSpecification.filter(
+                        user.getId(),
+                        filter),
+                pageable);
+
+        PageResponse<TransactionResponse> response = new PageResponse<>(
+                result.getContent().stream().map(transactionMapper::toResponse).toList(),
+                result.getNumber() + 1,
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages());
+
+        return response;
     }
 
     private User getUser(Auth auth) {

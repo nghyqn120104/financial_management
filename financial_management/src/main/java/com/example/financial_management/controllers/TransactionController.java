@@ -8,6 +8,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.financial_management.model.AbstractResponse;
 import com.example.financial_management.model.PageResponse;
 import com.example.financial_management.model.auth.Auth;
+import com.example.financial_management.model.transaction.TransactionDateRequest;
+import com.example.financial_management.model.transaction.TransactionFilterRequest;
 import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.model.transaction.TransactionResponse;
 import com.example.financial_management.model.transaction.TransactionUpdateResponse;
@@ -26,6 +28,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -71,7 +74,7 @@ public class TransactionController {
 
         @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         public ResponseEntity<AbstractResponse<TransactionResponse>> createTransaction(
-                        @ModelAttribute TransactionRequest request,
+                        @ModelAttribute TransactionDateRequest request,
                         @RequestPart(value = "file", required = false) MultipartFile file,
                         @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
                 return new AbstractResponse<TransactionResponse>()
@@ -95,4 +98,14 @@ public class TransactionController {
                         @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
                 return new AbstractResponse<Boolean>().withData(() -> transactionService.deleteTransaction(id, auth));
         }
+
+        @PostMapping("/filter")
+        public ResponseEntity<AbstractResponse<PageResponse<TransactionResponse>>> filterTransactions(
+                        @RequestBody TransactionFilterRequest filter,
+                        @AuthenticationPrincipal Auth auth) {
+
+                return new AbstractResponse<PageResponse<TransactionResponse>>()
+                                .withData(() -> transactionService.filterTransactions(auth, filter));
+        }
+
 }
