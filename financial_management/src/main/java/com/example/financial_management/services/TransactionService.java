@@ -12,7 +12,6 @@ import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.model.transaction.TransactionResponse;
 import com.example.financial_management.model.transaction.TransactionUpdateResponse;
-import com.example.financial_management.repository.AccountRepository;
 import com.example.financial_management.repository.TransactionRepository;
 import com.example.financial_management.repository.UserRepository;
 
@@ -30,7 +29,6 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -41,7 +39,6 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final UserRepository userRepository;
     private final AccountService accountService;
-    private final AccountRepository accountRepository;
     @Value("${app.upload.dir}")
     private String uploadDir;
 
@@ -89,42 +86,39 @@ public class TransactionService {
     public TransactionResponse createTransaction(TransactionRequest request, Auth auth, MultipartFile file) {
         Account account = accountService.validateAccount(request.getAccountId(), auth, Status.ACTIVE);
 
-        validateCurrency(request, account);
-        validateCategory(request);
+        validateCurrency(request.getCurrency(), account);
+        validateCategory(request.getType(), request.getCategory());
 
         // Tạo transaction
         Transaction transaction = transactionMapper.toEntity(request, account.getUserId());
 
-        // Kiểm tra nếu client muốn có ảnh (haveImage = true) thì mới xử lý file
-        if (request.isHaveImage()) {
-            if (file != null && !file.isEmpty()) {
-                String imagePath = saveImage(file);
-                transaction.setImagePath(imagePath);
-            } else {
-                throw new RuntimeException("Image file is required when haveImage = true");
-            }
-        } else {
-            transaction.setImagePath(null); // đảm bảo clear path nếu không có ảnh
-        }
+        // Xử lý ảnh
+        handleTransactionImage(transaction, request.isHaveImage(), file);
 
-        // Cập nhật số dư account
-        accountService.updateAccountBalance(account, request);
+        // Tính delta
+        BigDecimal delta = accountService.calculateDelta(request);
 
-        // Lưu transaction trước
+        // Apply vào account
+        accountService.applyDelta(account, delta);
+
+        // Lưu transaction
         Transaction saved = transactionRepository.save(transaction);
 
         return transactionMapper.toResponse(saved);
     }
 
     @Transactional
-    public TransactionUpdateResponse updateTransaction(TransactionRequest updated, Auth auth, UUID transactionId) {
+    public TransactionUpdateResponse updateTransaction(TransactionRequest updated, Auth auth, UUID transactionId,
+            MultipartFile file) {
         Account account = accountService.validateAccount(updated.getAccountId(), auth, Status.ACTIVE);
 
         Transaction transaction = transactionRepository.findByIdAndUserId(transactionId, account.getUserId())
                 .orElseThrow(() -> new RuntimeException("Transaction not found or access denied"));
 
-        // Giữ lại amount cũ
-        BigDecimal oldAmount = transaction.getAmount();
+        BigDecimal finalDelta = accountService.calculateFinalDelta(transaction, updated);
+
+        // validate và áp dụng
+        accountService.applyDelta(account, finalDelta);
 
         // Cập nhật transaction
         transaction.setAmount(updated.getAmount());
@@ -132,28 +126,39 @@ public class TransactionService {
         transaction.setType(updated.getType());
         transaction.setAccountId(updated.getAccountId());
         transaction.setUserId(UUID.fromString(auth.getId()));
-        transaction.setUpdatedAt(LocalDateTime.now());
+
+        validateCurrency(updated.getCurrency(), account);
+        validateCategory(updated.getType(), updated.getCategory());
+        handleTransactionImage(transaction, updated.isHaveImage(), file);
 
         Transaction saved = transactionRepository.save(transaction);
 
-        // Tính chênh lệch
-        BigDecimal difference = updated.getAmount().subtract(oldAmount);
-
-        // Cập nhật balance account
-        account.setBalance(account.getBalance().add(difference));
-        accountRepository.save(account);
-
-        // Trả response có thêm difference
+        // Trả response có thêm finalDelta
         TransactionUpdateResponse response = transactionMapper.toUpdateResponse(saved);
-        response.setDifference(difference);
+        response.setDifference(finalDelta);
         return response;
     }
 
-    public void delete(UUID id, Auth auth) {
+    @Transactional
+    public boolean deleteTransaction(UUID id, Auth auth) {
         User user = getUser(auth);
+
         Transaction transaction = transactionRepository.findByIdAndUserId(id, user.getId())
                 .orElseThrow(() -> new RuntimeException("Transaction not found or access denied"));
+
+        Account account = accountService.validateAccount(transaction.getAccountId(), auth, Status.ACTIVE);
+
+        // Delta của transaction cũ
+        BigDecimal oldDelta = transaction.getType() == TransactionType.INCOME
+                ? transaction.getAmount()
+                : transaction.getAmount().negate();
+
+        // Rollback balance (ngược lại delta cũ)
+        accountService.applyDelta(account, oldDelta.negate());
+
+        // Xoá transaction
         transactionRepository.delete(transaction);
+        return true;
     }
 
     private User getUser(Auth auth) {
@@ -161,15 +166,13 @@ public class TransactionService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    private void validateCurrency(TransactionRequest request, Account account) {
-        if (request.getCurrency() != account.getCurrency()) {
+    private void validateCurrency(int currency, Account account) {
+        if (currency != account.getCurrency()) {
             throw new RuntimeException("Transaction currency does not match account currency");
         }
     }
 
-    private void validateCategory(TransactionRequest request) {
-        int type = request.getType();
-        int category = request.getCategory();
+    private void validateCategory(int type, int category) {
 
         if (type == TransactionType.EXPENSE) {
             if (category < Category.FOOD || category > Category.OTHER_EXPENSE) {
@@ -185,6 +188,18 @@ public class TransactionService {
             }
         } else {
             throw new RuntimeException("Unknown transaction type: " + type);
+        }
+    }
+
+    private void handleTransactionImage(Transaction transaction, boolean haveImage, MultipartFile file) {
+        if (haveImage) {
+            if (file != null && !file.isEmpty()) {
+                String newPath = saveImage(file);
+                transaction.setImagePath(newPath);
+            }
+            // nếu file null hoặc empty → giữ ảnh cũ, không cần set gì
+        } else {
+            transaction.setImagePath(null); // xóa ảnh
         }
     }
 

@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.financial_management.constant.Status;
 import com.example.financial_management.constant.TransactionType;
 import com.example.financial_management.entity.Account;
+import com.example.financial_management.entity.Transaction;
 import com.example.financial_management.entity.User;
 import com.example.financial_management.mapper.AccountMapper;
 import com.example.financial_management.model.account.AccountRequest;
@@ -61,7 +62,8 @@ public class AccountService {
                     accountId, request.getCurrency());
 
             if (existsMismatch) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot change currency because account already has transaction with another currency.");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Cannot change currency because account already has transaction with another currency.");
             }
             account.setCurrency(request.getCurrency());
         }
@@ -133,21 +135,38 @@ public class AccountService {
                         "Account not found or status mismatch"));
     }
 
-    public void updateAccountBalance(Account account, TransactionRequest request) {
+    public BigDecimal calculateDelta(TransactionRequest request) {
         BigDecimal amount = request.getAmount();
 
         if (request.getType() == TransactionType.INCOME) {
-            // Thu nhập
-            account.setBalance(account.getBalance().add(amount));
+            return amount; // dương
         } else {
-            // Chi tiêu
-            if (account.getBalance().compareTo(amount) < 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient balance");
-            }
-            account.setBalance(account.getBalance().subtract(amount));
+            return amount.negate(); // âm
+        }
+    }
+
+    public void applyDelta(Account account, BigDecimal delta) {
+        BigDecimal newBalance = account.getBalance().add(delta);
+
+        if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient balance");
         }
 
+        account.setBalance(newBalance);
         accountRepository.saveAndFlush(account);
+    }
+
+    public BigDecimal calculateFinalDelta(Transaction transaction, TransactionRequest request) {
+        // Delta cũ (dựa trên transaction hiện tại trong DB)
+        BigDecimal oldDelta = transaction.getType() == TransactionType.INCOME
+                ? transaction.getAmount()
+                : transaction.getAmount().negate();
+
+        // Delta mới (dựa trên request update)
+        BigDecimal newDelta = calculateDelta(request);
+
+        // rollback oldDelta + apply newDelta
+        return newDelta.subtract(oldDelta);
     }
 
 }

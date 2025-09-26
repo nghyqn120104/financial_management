@@ -26,7 +26,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -78,12 +78,21 @@ public class TransactionController {
                                 .withData(() -> transactionService.createTransaction(request, auth, file));
         }
 
-        @PostMapping(value = "/{id}")
+        @PostMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         public ResponseEntity<AbstractResponse<TransactionUpdateResponse>> updateTransaction(
-                        @RequestParam UUID transactionId,
-                        @RequestBody TransactionRequest request,
+                        @PathVariable("id") UUID transactionId,
+                        @ModelAttribute TransactionRequest request,
+                        @RequestPart(value = "file", required = false) MultipartFile file,
                         @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
+
                 return new AbstractResponse<TransactionUpdateResponse>()
-                                .withData(() -> transactionService.updateTransaction(request, auth, transactionId));
+                                .withData(() -> transactionService.updateTransaction(request, auth, transactionId,
+                                                file));
+        }
+
+        @DeleteMapping("/{id}")
+        public ResponseEntity<AbstractResponse<Boolean>> dropTransaction(@RequestParam UUID id,
+                        @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
+                return new AbstractResponse<Boolean>().withData(() -> transactionService.deleteTransaction(id, auth));
         }
 }
