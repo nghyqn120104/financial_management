@@ -15,6 +15,7 @@ import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.model.transaction.TransactionResponse;
 import com.example.financial_management.model.transaction.TransactionSpecification;
 import com.example.financial_management.model.transaction.TransactionUpdateResponse;
+import com.example.financial_management.model.transaction.TransferRequest;
 import com.example.financial_management.repository.TransactionRepository;
 import com.example.financial_management.repository.UserRepository;
 
@@ -166,6 +167,44 @@ public class TransactionService {
         // Xoá transaction
         transactionRepository.delete(transaction);
         return true;
+    }
+
+    @Transactional
+    public TransactionResponse transfer(TransferRequest request, Auth auth) {
+        // Lấy user
+        User user = getUser(auth);
+
+        // Lấy transaction cũ
+        Transaction transaction = transactionRepository.findByIdAndUserId(request.getTransactionId(), user.getId())
+                .orElseThrow(() -> new RuntimeException("Transaction not found or access denied"));
+
+        // Lấy account cũ và account mới
+        Account oldAccount = accountService.validateAccount(transaction.getAccountId(), auth, Status.ACTIVE);
+        Account newAccount = accountService.validateAccount(request.getAccountId(), auth, Status.ACTIVE);
+
+        // Validate currency
+        if (oldAccount.getCurrency() != newAccount.getCurrency()) {
+            throw new RuntimeException("Currency mismatch between accounts");
+        }
+
+        if (oldAccount.getId().equals(newAccount.getId())) {
+            throw new RuntimeException("Cannot transfer to the same account");
+        }
+
+        // Rollback delta ở account cũ
+        BigDecimal oldDelta = transaction.getType() == TransactionType.INCOME
+                ? transaction.getAmount()
+                : transaction.getAmount().negate();
+        accountService.applyDelta(oldAccount, oldDelta.negate());
+
+        // Apply delta cho account mới
+        accountService.applyDelta(newAccount, oldDelta);
+
+        // Cập nhật transaction sang account mới
+        transaction.setAccountId(newAccount.getId());
+        Transaction saved = transactionRepository.save(transaction);
+
+        return transactionMapper.toResponse(saved);
     }
 
     public PageResponse<TransactionResponse> filterTransactions(Auth auth, TransactionFilterRequest filter) {

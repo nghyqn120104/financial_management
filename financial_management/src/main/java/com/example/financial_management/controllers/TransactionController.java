@@ -13,6 +13,7 @@ import com.example.financial_management.model.transaction.TransactionFilterReque
 import com.example.financial_management.model.transaction.TransactionRequest;
 import com.example.financial_management.model.transaction.TransactionResponse;
 import com.example.financial_management.model.transaction.TransactionUpdateResponse;
+import com.example.financial_management.model.transaction.TransferRequest;
 import com.example.financial_management.services.TransactionService;
 
 import io.swagger.v3.oas.annotations.Parameter;
@@ -102,10 +103,17 @@ public class TransactionController {
         @PostMapping("/filter")
         public ResponseEntity<AbstractResponse<PageResponse<TransactionResponse>>> filterTransactions(
                         @RequestBody TransactionFilterRequest filter,
-                        @AuthenticationPrincipal Auth auth) {
+                        @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
 
                 return new AbstractResponse<PageResponse<TransactionResponse>>()
                                 .withData(() -> transactionService.filterTransactions(auth, filter));
+        }
+
+        @PostMapping("/transfer")
+        public ResponseEntity<AbstractResponse<TransactionResponse>> transfer(@RequestBody TransferRequest request,
+                        @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
+                return new AbstractResponse<TransactionResponse>()
+                                .withData(() -> transactionService.transfer(request, auth));
         }
 
 }
