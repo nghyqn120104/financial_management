@@ -7,10 +7,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.example.financial_management.model.auth.Auth;
+import com.example.financial_management.model.auth.AuthAccount;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtTokenUtil {
@@ -27,12 +31,21 @@ public class JwtTokenUtil {
 
     // Tạo JWT
     public String generateToken(Auth auth) {
+        // Chuyển danh sách AuthAccount sang dạng Map để JWT lưu được
+        List<Map<String, Object>> accounts = auth.getAccounts().stream()
+                .map(acc -> Map.<String, Object>of(
+                        "id", acc.getId(),
+                        "name", acc.getName(),
+                        "status", acc.getStatus()))
+                .collect(Collectors.toList());
+
         return Jwts.builder()
                 .setSubject(auth.getId())
                 .claim("name", auth.getName())
                 .claim("email", auth.getEmail())
                 .claim("status", auth.getStatus())
                 .claim("role", auth.getRole())
+                .claim("accounts", accounts) // lưu danh sách account
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
@@ -49,15 +62,34 @@ public class JwtTokenUtil {
     }
 
     public Auth extractAuth(String token) {
-        Claims claims = Jwts.parserBuilder().setSigningKey(secretKey).build()
-                .parseClaimsJws(token).getBody();
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
 
         Auth auth = new Auth();
         auth.setId(claims.getSubject());
         auth.setName(claims.get("name", String.class));
         auth.setEmail(claims.get("email", String.class));
         auth.setStatus(claims.get("status", Integer.class));
-        auth.setRole(claims.get("role",Integer.class));
+        auth.setRole(claims.get("role", Integer.class));
+
+        // Lấy accounts
+        List<Map<String, Object>> accountMaps = claims.get("accounts", List.class);
+        if (accountMaps != null) {
+            List<AuthAccount> authAccounts = accountMaps.stream().map(m -> {
+                AuthAccount acc = new AuthAccount();
+                acc.setId(UUID.fromString((String) m.get("id"))); // convert từ String sang UUID
+                acc.setName((String) m.get("name"));
+                acc.setStatus((Integer) m.get("status"));
+                return acc;
+            }).collect(Collectors.toList());
+            auth.setAccounts(authAccounts);
+        } else {
+            auth.setAccounts(List.of());
+        }
+
         return auth;
     }
 
