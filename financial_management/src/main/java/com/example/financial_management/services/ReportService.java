@@ -20,9 +20,12 @@ import com.example.financial_management.constant.TransactionType;
 import com.example.financial_management.entity.User;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.report.request.DailyReportRequest;
+import com.example.financial_management.model.report.request.MonthlyReportRequest;
 import com.example.financial_management.model.report.request.SummaryReportRequest;
 import com.example.financial_management.model.report.response.DailyReportResponse;
 import com.example.financial_management.model.report.response.DailyReportResponseItem;
+import com.example.financial_management.model.report.response.MonthlyReportResponse;
+import com.example.financial_management.model.report.response.MonthlyReportResponseItem;
 import com.example.financial_management.model.report.response.SummaryReportResponse;
 import com.example.financial_management.repository.TransactionRepository;
 import com.example.financial_management.repository.UserRepository;
@@ -105,6 +108,26 @@ public class ReportService {
                 response.setMonth(monthFormatted);
                 response.setTotalIncome(totalIncome);
                 response.setTotalExpense(totalExpense);
+                response.setNet(net);
+                response.setItems(items);
+
+                return response;
+        }
+
+        public MonthlyReportResponse getMonthlyReport(MonthlyReportRequest request, Auth auth) {
+                User user = getUser(auth);
+
+                validateAccountAccess(auth, request.getAccountId());
+
+                List<MonthlyReportResponseItem> items = transactionRepository.sumMonthly(
+                                user.getId(), request.getYear(), request.getAccountId());
+
+                BigDecimal income = items.stream().map(MonthlyReportResponseItem::getIncome).reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal expense = items.stream().map(MonthlyReportResponseItem::getExpense).reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal net = income.subtract(expense);
+
+                MonthlyReportResponse response = new MonthlyReportResponse();
+                response.setYear(request.getYear());
                 response.setNet(net);
                 response.setItems(items);
 
