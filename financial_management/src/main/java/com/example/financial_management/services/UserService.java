@@ -1,14 +1,17 @@
 package com.example.financial_management.services;
 
 import com.example.financial_management.model.auth.Auth;
+import com.example.financial_management.model.auth.AuthAccount;
 import com.example.financial_management.model.user.ChangeNameRequest;
 import com.example.financial_management.model.user.ChangePasswordRequest;
 import com.example.financial_management.model.user.ChangeUserStatusRequest;
 import com.example.financial_management.model.user.LoginRequest;
 import com.example.financial_management.model.user.UserResponse;
 import com.example.financial_management.model.user.UserSignUpRequest;
+import com.example.financial_management.entity.Account;
 import com.example.financial_management.entity.User;
 import com.example.financial_management.mapper.UserMapper;
+import com.example.financial_management.repository.AccountRepository;
 import com.example.financial_management.repository.UserRepository;
 import com.example.financial_management.util.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ import com.example.financial_management.constant.Status;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
     private final JwtTokenUtil jwtTokenUtil;
     private final UserMapper userMapper;
     @Value("${email_admin}")
@@ -67,7 +71,11 @@ public class UserService {
         validateUser(user);
         validatePassword(user, request.getPassword());
 
-        return generateToken(user);
+        List<Account> accounts = accountRepository.findAllByUserIdAndStatus(user.getId(), Status.ACTIVE);
+
+        Auth auth = createAuth(user, accounts);
+
+        return jwtTokenUtil.generateToken(auth);
     }
 
     public UserResponse getCurrentUser(Auth auth) {
@@ -137,17 +145,6 @@ public class UserService {
         }
     }
 
-    private String generateToken(User user) {
-        Auth auth = new Auth();
-        auth.setId(user.getId().toString());
-        auth.setName(user.getName());
-        auth.setEmail(user.getEmail());
-        auth.setStatus(user.getStatus());
-        auth.setRole(user.getRole());
-
-        return jwtTokenUtil.generateToken(auth);
-    }
-
     private void validateUser(User user) {
         if (user.getStatus() != Status.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not active");
@@ -196,6 +193,31 @@ public class UserService {
         if (!password.equals(confirmPassword)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password and confirm password do not match");
         }
+    }
+
+    private Auth createAuth(User user, List<Account> accounts) {
+        Auth auth = new Auth();
+        auth.setId(user.getId().toString());
+        auth.setRole(user.getRole());
+        auth.setStatus(user.getStatus());
+        auth.setEmail(user.getEmail());
+        auth.setName(user.getName());
+
+        // Chuyển List<Account> sang List<AuthAccount>
+        if (accounts != null && !accounts.isEmpty()) {
+            List<AuthAccount> authAccounts = accounts.stream().map(acc -> {
+                AuthAccount authAcc = new AuthAccount();
+                authAcc.setId(acc.getId());
+                authAcc.setName(acc.getName());
+                authAcc.setStatus(acc.getStatus());
+                return authAcc;
+            }).toList();
+            auth.setAccounts(authAccounts);
+        } else {
+            auth.setAccounts(List.of());
+        }
+
+        return auth;
     }
 
 }

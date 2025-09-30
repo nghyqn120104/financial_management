@@ -4,6 +4,7 @@ import com.example.financial_management.constant.Role;
 import com.example.financial_management.constant.Status;
 import lombok.Data;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -13,6 +14,7 @@ public class Auth {
     private String email;
     private int role; // vai trò
     private int status; // trạng thái user
+    private List<AuthAccount> accounts;
 
     public boolean isActive() {
         return status == Status.ACTIVE;

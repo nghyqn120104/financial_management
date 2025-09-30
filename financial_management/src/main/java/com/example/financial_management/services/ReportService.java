@@ -4,11 +4,16 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.financial_management.constant.Status;
 import com.example.financial_management.constant.TransactionType;
@@ -34,6 +39,8 @@ public class ReportService {
 
         public SummaryReportResponse getSummary(SummaryReportRequest request, Auth auth) {
                 User user = getUser(auth);
+
+                validateAccountAccess(auth, request.getAccountId());
 
                 // Convert LocalDate -> LocalDateTime
                 LocalDateTime fromDateTime = request.getFrom() != null
@@ -67,11 +74,12 @@ public class ReportService {
         public DailyReportResponse getDailyReport(DailyReportRequest request, Auth auth) {
                 User user = getUser(auth);
 
-                LocalDateTime month = request.getMonth();
+                validateAccountAccess(auth, request.getAccountId());
+
+                YearMonth month = parseMonth(request.getMonth());
                 String monthFormatted = month.format(DateTimeFormatter.ofPattern("MM-yyyy"));
-                LocalDateTime start = month.withDayOfMonth(1).toLocalDate().atStartOfDay();
-                LocalDateTime end = month.withDayOfMonth(month.toLocalDate().lengthOfMonth())
-                                .with(LocalTime.MAX);
+                LocalDateTime start = month.atDay(1).atStartOfDay();
+                LocalDateTime end = month.atEndOfMonth().atTime(LocalTime.MAX);
 
                 List<Object[]> rows = transactionRepository.sumDaily(
                                 user.getId(), start, end, request.getAccountId());
@@ -79,8 +87,9 @@ public class ReportService {
                 List<DailyReportResponseItem> items = rows.stream()
                                 .map(row -> new DailyReportResponseItem(
                                                 ((java.sql.Date) row[0]).toLocalDate(),
-                                                (BigDecimal) row[1],
-                                                (BigDecimal) row[2]))
+                                                UUID.fromString((String) row[1]),
+                                                (BigDecimal) row[2],
+                                                (BigDecimal) row[3]))
                                 .toList();
 
                 // Tính tổng income và expense
@@ -106,4 +115,31 @@ public class ReportService {
                 return userRepository.findByIdAndStatus(UUID.fromString(auth.getId()), Status.ACTIVE)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
         }
+
+        private void validateAccountAccess(Auth auth, UUID accountId) {
+                if (accountId == null) {
+                        // Nếu null, cho phép xem tất cả account của user
+                        return;
+                }
+
+                boolean hasAccess = auth.getAccounts().stream()
+                                .anyMatch(acc -> acc.getId().equals(accountId));
+
+                if (!hasAccess) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied for this account");
+                }
+        }
+
+        private YearMonth parseMonth(String monthStr) {
+                DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+                                .appendPattern("[MM-yyyy][M-yyyy]") // có thể parse MM-yyyy hoặc M-yyyy
+                                .toFormatter();
+
+                try {
+                        return YearMonth.parse(monthStr, formatter);
+                } catch (DateTimeParseException e) {
+                        throw new RuntimeException("Invalid month format, expected MM-yyyy or M-yyyy");
+                }
+        }
+
 }
