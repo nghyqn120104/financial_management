@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.financial_management.model.AbstractResponse;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.report.request.DailyReportRequest;
+import com.example.financial_management.model.report.request.MonthlyReportRequest;
 import com.example.financial_management.model.report.request.SummaryReportRequest;
 import com.example.financial_management.model.report.response.DailyReportResponse;
+import com.example.financial_management.model.report.response.MonthlyReportResponse;
 import com.example.financial_management.model.report.response.SummaryReportResponse;
 import com.example.financial_management.services.ReportService;
 
@@ -37,6 +39,13 @@ public class ReportController {
     public ResponseEntity<AbstractResponse<DailyReportResponse>> getDailyReport(@RequestBody DailyReportRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<DailyReportResponse>().withData(() -> reportService.getDailyReport(request, auth));
+    }
+
+    @PostMapping("/monthly")
+    public ResponseEntity<AbstractResponse<MonthlyReportResponse>> getMonthlyReport(
+            @RequestBody MonthlyReportRequest request, @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
+        return new AbstractResponse<MonthlyReportResponse>()
+                .withData(() -> reportService.getMonthlyReport(request, auth));
     }
 
 }

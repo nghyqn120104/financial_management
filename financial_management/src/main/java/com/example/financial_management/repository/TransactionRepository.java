@@ -14,6 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.financial_management.entity.Transaction;
+import com.example.financial_management.model.report.response.MonthlyReportResponseItem;
 
 public interface TransactionRepository extends JpaRepository<Transaction, UUID>, JpaSpecificationExecutor<Transaction> {
   Page<Transaction> findByUserId(UUID userId, Pageable pageable);
@@ -63,6 +64,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
       @Param("userId") UUID userId,
       @Param("start") LocalDateTime start,
       @Param("end") LocalDateTime end,
+      @Param("accountId") UUID accountId);
+
+  @Query("""
+          SELECT new com.example.financial_management.model.report.response.MonthlyReportResponseItem(
+              MONTH(t.createdAt),
+              COALESCE(SUM(CASE WHEN t.type = 1 THEN t.amount ELSE 0 END), 0),
+              COALESCE(SUM(CASE WHEN t.type = 0 THEN t.amount ELSE 0 END), 0),
+              YEAR(t.createdAt)
+          )
+          FROM Transaction t
+          WHERE t.userId = :userId
+            AND YEAR(t.createdAt) = :year
+            AND (:accountId IS NULL OR t.accountId = :accountId)
+          GROUP BY MONTH(t.createdAt), YEAR(t.createdAt)
+          ORDER BY MONTH(t.createdAt)
+      """)
+  List<MonthlyReportResponseItem> sumMonthly(
+      @Param("userId") UUID userId,
+      @Param("year") int year,
       @Param("accountId") UUID accountId);
 
 }
