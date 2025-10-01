@@ -1,6 +1,7 @@
 package com.example.financial_management.services;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -15,13 +16,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.financial_management.constant.Category;
 import com.example.financial_management.constant.Status;
 import com.example.financial_management.constant.TransactionType;
 import com.example.financial_management.entity.User;
 import com.example.financial_management.model.auth.Auth;
+import com.example.financial_management.model.report.request.CategoryReportRequest;
 import com.example.financial_management.model.report.request.DailyReportRequest;
 import com.example.financial_management.model.report.request.MonthlyReportRequest;
 import com.example.financial_management.model.report.request.SummaryReportRequest;
+import com.example.financial_management.model.report.response.CategoryReportItem;
+import com.example.financial_management.model.report.response.CategoryReportResponse;
 import com.example.financial_management.model.report.response.DailyReportResponse;
 import com.example.financial_management.model.report.response.DailyReportResponseItem;
 import com.example.financial_management.model.report.response.MonthlyReportResponse;
@@ -122,8 +127,10 @@ public class ReportService {
                 List<MonthlyReportResponseItem> items = transactionRepository.sumMonthly(
                                 user.getId(), request.getYear(), request.getAccountId());
 
-                BigDecimal income = items.stream().map(MonthlyReportResponseItem::getIncome).reduce(BigDecimal.ZERO, BigDecimal::add);
-                BigDecimal expense = items.stream().map(MonthlyReportResponseItem::getExpense).reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal income = items.stream().map(MonthlyReportResponseItem::getIncome).reduce(BigDecimal.ZERO,
+                                BigDecimal::add);
+                BigDecimal expense = items.stream().map(MonthlyReportResponseItem::getExpense).reduce(BigDecimal.ZERO,
+                                BigDecimal::add);
                 BigDecimal net = income.subtract(expense);
 
                 MonthlyReportResponse response = new MonthlyReportResponse();
@@ -131,6 +138,70 @@ public class ReportService {
                 response.setNet(net);
                 response.setItems(items);
 
+                return response;
+        }
+
+        public CategoryReportResponse getCategoryReport(CategoryReportRequest request, Auth auth) {
+                User user = getUser(auth);
+
+                validateAccountAccess(auth, request.getAccountId());
+
+                // Query
+                List<CategoryReportItem> items = transactionRepository.sumByCategory(
+                                user.getId(),
+                                request.getAccountId(),
+                                request.getFromDate() != null ? request.getFromDate().atStartOfDay() : null,
+                                request.getToDate() != null ? request.getToDate().atTime(LocalTime.MAX) : null);
+
+                // Tổng chi / thu
+                BigDecimal totalExpense = items.stream()
+                                .map(CategoryReportItem::getExpense)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                BigDecimal totalIncome = items.stream()
+                                .map(CategoryReportItem::getIncome)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                // Tính % trên chi tiêu
+                for (CategoryReportItem item : items) {
+                        if (totalExpense.compareTo(BigDecimal.ZERO) > 0) {
+                                double expensePercentage = item.getExpense()
+                                                .divide(totalExpense, 4, RoundingMode.HALF_UP)
+                                                .multiply(BigDecimal.valueOf(100))
+                                                .doubleValue();
+                                item.setExpensePercentage(expensePercentage);
+                        } else {
+                                item.setExpensePercentage(0.0);
+                        }
+
+                        if (totalIncome.compareTo(BigDecimal.ZERO) > 0) {
+                                double incomePercent = item.getIncome()
+                                                .divide(totalIncome, 4, RoundingMode.HALF_UP)
+                                                .multiply(BigDecimal.valueOf(100))
+                                                .doubleValue();
+                                item.setIncomePercentage(incomePercent);
+                        } else {
+                                item.setIncomePercentage(0.0);
+                        }
+
+                        // Xác định transaction type dựa vào giá trị
+                        if (item.getExpense().compareTo(BigDecimal.ZERO) > 0) {
+                                item.setTransactionTypeName("Expense");
+                        } else if (item.getIncome().compareTo(BigDecimal.ZERO) > 0) {
+                                item.setTransactionTypeName("Income");
+                        } else {
+                                item.setTransactionTypeName("Unknown");
+                        }
+
+                        // Gán tên category
+                        item.setCategoryName(Category.getName(item.getCategory()));
+                }
+
+                // Response
+                CategoryReportResponse response = new CategoryReportResponse();
+                response.setItems(items);
+                response.setTotalExpense(totalExpense);
+                response.setTotalIncome(totalIncome);
                 return response;
         }
 

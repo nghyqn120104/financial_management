@@ -8,4 +8,17 @@ public class TransactionType {
     private TransactionType() {
         // Utility class
     }
+
+    public static String getName(int type) {
+        switch (type) {
+            case EXPENSE:
+                return "Expense";
+            case INCOME:
+                return "Income";
+            case TRANSFER:
+                return "Transfer";
+            default:
+                return "Unknown";
+        }
+    }
 }

@@ -26,4 +26,43 @@ public class Category {
     private Category() {
         // Utility class
     }
+
+    public static String getName(int categoryId) {
+        switch (categoryId) {
+            case FOOD:
+                return "Food";
+            case TRANSPORT:
+                return "Transport";
+            case ENTERTAINMENT:
+                return "Entertainment";
+            case UTILITIES:
+                return "Utilities";
+            case HEALTHCARE:
+                return "Healthcare";
+            case EDUCATION:
+                return "Education";
+            case SHOPPING:
+                return "Shopping";
+            case HOUSING:
+                return "Housing";
+            case DEBT:
+                return "Debt";
+            case OTHER_EXPENSE:
+                return "Other Expense";
+            case SALARY:
+                return "Salary";
+            case BUSINESS:
+                return "Business";
+            case INVESTMENTS:
+                return "Investments";
+            case GIFTS:
+                return "Gifts";
+            case OTHER_INCOME:
+                return "Other Income";
+            case TRANSFER:
+                return "Transfer";
+            default:
+                return "Unknown";
+        }
+    }
 }

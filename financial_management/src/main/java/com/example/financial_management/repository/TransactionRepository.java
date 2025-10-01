@@ -14,6 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.financial_management.entity.Transaction;
+import com.example.financial_management.model.report.response.CategoryReportItem;
 import com.example.financial_management.model.report.response.MonthlyReportResponseItem;
 
 public interface TransactionRepository extends JpaRepository<Transaction, UUID>, JpaSpecificationExecutor<Transaction> {
@@ -84,5 +85,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
       @Param("userId") UUID userId,
       @Param("year") int year,
       @Param("accountId") UUID accountId);
+
+  @Query("""
+          SELECT new com.example.financial_management.model.report.response.CategoryReportItem(
+              t.category,
+              COALESCE(SUM(CASE WHEN t.type = 0 THEN t.amount ELSE 0 END), 0),
+              COALESCE(SUM(CASE WHEN t.type = 1 THEN t.amount ELSE 0 END), 0)
+          )
+          FROM Transaction t
+          WHERE t.userId = :userId
+            AND (:accountId IS NULL OR t.accountId = :accountId)
+            AND (:fromDate IS NULL OR t.createdAt >= :fromDate)
+            AND (:toDate IS NULL OR t.createdAt <= :toDate)
+          GROUP BY t.category
+      """)
+  List<CategoryReportItem> sumByCategory(
+      @Param("userId") UUID userId,
+      @Param("accountId") UUID accountId,
+      @Param("fromDate") LocalDateTime fromDate,
+      @Param("toDate") LocalDateTime toDate);
 
 }
