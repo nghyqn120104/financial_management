@@ -97,7 +97,7 @@ public class TransactionService {
         // Tạo transaction
         Transaction transaction = transactionMapper.toEntity(request, account.getUserId());
         if (request.getCreateAt() != null) {
-            transaction.setCreatedAt(request.getCreateAt());
+            transaction.setCreatedAt(request.getCreateAt().toLocalDateTime());
         }
 
         // Xử lý ảnh

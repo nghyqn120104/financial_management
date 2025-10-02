@@ -5,7 +5,7 @@ import java.util.UUID;
 import lombok.Data;
 
 @Data
-public class DailyReportRequest {
+public class ReportRequest {
     private String month;
     private UUID accountId;
 }

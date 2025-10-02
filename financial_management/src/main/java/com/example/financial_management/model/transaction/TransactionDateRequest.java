@@ -1,6 +1,6 @@
 package com.example.financial_management.model.transaction;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -8,5 +8,5 @@ import lombok.Setter;
 @Getter
 @Setter
 public class TransactionDateRequest extends TransactionRequest {
-    private LocalDateTime createAt;
+    private OffsetDateTime createAt;
 }
