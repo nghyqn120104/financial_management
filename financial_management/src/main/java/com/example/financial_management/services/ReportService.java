@@ -22,11 +22,12 @@ import com.example.financial_management.constant.TransactionType;
 import com.example.financial_management.entity.User;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.report.request.CategoryReportRequest;
-import com.example.financial_management.model.report.request.DailyReportRequest;
+import com.example.financial_management.model.report.request.ReportRequest;
 import com.example.financial_management.model.report.request.MonthlyReportRequest;
 import com.example.financial_management.model.report.request.SummaryReportRequest;
 import com.example.financial_management.model.report.response.CategoryReportItem;
 import com.example.financial_management.model.report.response.CategoryReportResponse;
+import com.example.financial_management.model.report.response.CompareReportResponse;
 import com.example.financial_management.model.report.response.DailyReportResponse;
 import com.example.financial_management.model.report.response.DailyReportResponseItem;
 import com.example.financial_management.model.report.response.MonthlyReportResponse;
@@ -79,7 +80,7 @@ public class ReportService {
                 return response;
         }
 
-        public DailyReportResponse getDailyReport(DailyReportRequest request, Auth auth) {
+        public DailyReportResponse getDailyReport(ReportRequest request, Auth auth) {
                 User user = getUser(auth);
 
                 validateAccountAccess(auth, request.getAccountId());
@@ -203,6 +204,73 @@ public class ReportService {
                 response.setTotalExpense(totalExpense);
                 response.setTotalIncome(totalIncome);
                 return response;
+        }
+
+        public CompareReportResponse getCompareReport(ReportRequest request, Auth auth) {
+                User user = getUser(auth);
+                validateAccountAccess(auth, request.getAccountId());
+
+                YearMonth thisMonth = parseMonth(request.getMonth());
+                String monthFormatted = thisMonth.format(DateTimeFormatter.ofPattern("MM-yyyy"));
+                YearMonth lastMonth = thisMonth.minusMonths(1);              
+
+                // Range tháng này
+                LocalDateTime startThisMonth = thisMonth.atDay(1).atStartOfDay();
+                LocalDateTime endThisMonth = thisMonth.atEndOfMonth().atTime(LocalTime.MAX);
+
+                // Range tháng trước
+                LocalDateTime startLastMonth = lastMonth.atDay(1).atStartOfDay();
+                LocalDateTime endLastMonth = lastMonth.atEndOfMonth().atTime(LocalTime.MAX);
+
+                // Query
+                BigDecimal incomeThis = transactionRepository.sumAmount(user.getId(), startThisMonth, endThisMonth,
+                                request.getAccountId(), TransactionType.INCOME).orElse(BigDecimal.ZERO);
+
+                BigDecimal expenseThis = transactionRepository.sumAmount(user.getId(), startThisMonth, endThisMonth,
+                                request.getAccountId(), TransactionType.EXPENSE).orElse(BigDecimal.ZERO);
+
+                BigDecimal incomeLast = transactionRepository.sumAmount(user.getId(), startLastMonth, endLastMonth,
+                                request.getAccountId(), TransactionType.INCOME).orElse(BigDecimal.ZERO);
+
+                BigDecimal expenseLast = transactionRepository.sumAmount(user.getId(), startLastMonth, endLastMonth,
+                                request.getAccountId(), TransactionType.EXPENSE).orElse(BigDecimal.ZERO);
+
+                // Net
+                BigDecimal netThis = incomeThis.subtract(expenseThis);
+                BigDecimal netLast = incomeLast.subtract(expenseLast);
+
+                // % thay đổi
+                Double incomeChange = calcPercentChange(incomeThis, incomeLast);
+                Double expenseChange = calcPercentChange(expenseThis, expenseLast);
+                Double netChange = calcPercentChange(netThis, netLast);
+
+                // Response
+                CompareReportResponse response = new CompareReportResponse();
+                response.setMonth(monthFormatted);
+
+                response.setIncomeThisMonth(incomeThis);
+                response.setExpenseThisMonth(expenseThis);
+                response.setNetThisMonth(netThis);
+
+                response.setIncomeLastMonth(incomeLast);
+                response.setExpenseLastMonth(expenseLast);
+                response.setNetLastMonth(netLast);
+
+                response.setIncomeChangePercent(incomeChange);
+                response.setExpenseChangePercent(expenseChange);
+                response.setNetChangePercent(netChange);
+
+                return response;
+        }
+
+        private Double calcPercentChange(BigDecimal current, BigDecimal previous) {
+                if (previous.compareTo(BigDecimal.ZERO) == 0) {
+                        return null; // hoặc 100% nếu bạn muốn coi là tăng toàn bộ
+                }
+                return current.subtract(previous)
+                                .divide(previous, 4, RoundingMode.HALF_UP)
+                                .multiply(BigDecimal.valueOf(100))
+                                .doubleValue();
         }
 
         private User getUser(Auth auth) {

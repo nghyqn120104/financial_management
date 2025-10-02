@@ -10,10 +10,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.financial_management.model.AbstractResponse;
 import com.example.financial_management.model.auth.Auth;
 import com.example.financial_management.model.report.request.CategoryReportRequest;
-import com.example.financial_management.model.report.request.DailyReportRequest;
+import com.example.financial_management.model.report.request.ReportRequest;
 import com.example.financial_management.model.report.request.MonthlyReportRequest;
 import com.example.financial_management.model.report.request.SummaryReportRequest;
 import com.example.financial_management.model.report.response.CategoryReportResponse;
+import com.example.financial_management.model.report.response.CompareReportResponse;
 import com.example.financial_management.model.report.response.DailyReportResponse;
 import com.example.financial_management.model.report.response.MonthlyReportResponse;
 import com.example.financial_management.model.report.response.SummaryReportResponse;
@@ -38,7 +39,7 @@ public class ReportController {
     }
 
     @PostMapping("/daily")
-    public ResponseEntity<AbstractResponse<DailyReportResponse>> getDailyReport(@RequestBody DailyReportRequest request,
+    public ResponseEntity<AbstractResponse<DailyReportResponse>> getDailyReport(@RequestBody ReportRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<DailyReportResponse>().withData(() -> reportService.getDailyReport(request, auth));
     }
@@ -55,6 +56,13 @@ public class ReportController {
             @RequestBody CategoryReportRequest request, @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
         return new AbstractResponse<CategoryReportResponse>()
                 .withData(() -> reportService.getCategoryReport(request, auth));
+    }
+
+    @PostMapping("/compare")
+    public ResponseEntity<AbstractResponse<CompareReportResponse>> getCompareReport(@RequestBody ReportRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
+        return new AbstractResponse<CompareReportResponse>()
+                .withData(() -> reportService.getCompareReport(request, auth));
     }
 
 }
