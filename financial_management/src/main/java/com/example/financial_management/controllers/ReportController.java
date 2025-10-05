@@ -65,4 +65,18 @@ public class ReportController {
                 .withData(() -> reportService.getCompareReport(request, auth));
     }
 
+    @PostMapping("/export/month")
+    public ResponseEntity<byte[]> exportMonthlyReportByMonth(
+            @RequestBody ReportRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
+        return reportService.exportMonthlyReportByMonthPDF(request, auth);
+    }
+
+    @PostMapping("/export/year")
+    public ResponseEntity<byte[]> exportMonthlyReportByYear(
+            @RequestBody MonthlyReportRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Auth auth) {
+        return reportService.exportMonthlyReportByYearPDF(request, auth);
+    }
+
 }
