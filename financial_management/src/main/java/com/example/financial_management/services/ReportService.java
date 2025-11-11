@@ -3,6 +3,7 @@ package com.example.financial_management.services;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -53,6 +54,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ReportService {
         private final TransactionRepository transactionRepository;
         private final UserRepository userRepository;
+        private static final DecimalFormat MONEY_FORMAT = new DecimalFormat("#,##0");
 
         public SummaryReportResponse getSummary(SummaryReportRequest request, Auth auth) {
                 User user = getUser(auth);
@@ -304,8 +306,8 @@ public class ReportService {
 
                         for (DailyReportResponseItem item : data.getItems()) {
                                 table.addCell(item.getDate().toString());
-                                table.addCell(item.getIncome().toString());
-                                table.addCell(item.getExpense().toString());
+                                table.addCell(formatMoney(item.getIncome()));
+                                table.addCell(formatMoney(item.getExpense()));
                         }
 
                         doc.add(table);
@@ -361,9 +363,9 @@ public class ReportService {
 
                         for (MonthlyReportResponseItem item : data.getItems()) {
                                 table.addCell(item.getMonth());
-                                table.addCell(item.getIncome().toString());
-                                table.addCell(item.getExpense().toString());
-                                table.addCell(item.getNet().toString());
+                                table.addCell(formatMoney(item.getIncome()));
+                                table.addCell(formatMoney(item.getExpense()));
+                                table.addCell(formatMoney(item.getNet()));
 
                                 totalIncome = totalIncome.add(item.getIncome());
                                 totalExpense = totalExpense.add(item.getExpense());
@@ -458,6 +460,10 @@ public class ReportService {
                 } catch (DateTimeParseException e) {
                         throw new RuntimeException("Invalid month format, expected MM-yyyy or M-yyyy");
                 }
+        }
+
+        private String formatMoney(BigDecimal amount) {
+                return MONEY_FORMAT.format(amount);
         }
 
 }
